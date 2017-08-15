@@ -20,6 +20,25 @@ test:
     MYSQL_PASSWORD: password
     TEST_OUTPUT_DIR: /reports
 
+builder:
+  # Same build and dockerfile as the "test" service
+  build: ../../
+  dockerfile: docker/dev/Dockerfile
+  volumes:
+    # This is where the builder will output application artifacts
+    - ../../target:/wheelhouse
+  # This will get access to the cache volume created under the
+  # Test stage, so it can be consumed during the build stage
+  volumes_from:
+    - cache
+  # This activates the virtual environment without running 
+  # pip install
+  entrypoint: "entrypoint.sh"
+  # We then call python to build wheels without looking for
+  # external dependencies. All source will come from /build
+  # The final "." tells it to build based on the setup.py
+  command: ["pip", "wheel", "--no-index", "-f /build", "."]
+
 agent:
   image: pluralsight/ansible
   volumes:
@@ -44,5 +63,6 @@ cache:
   dockerfile: docker/dev/Dockerfile
   volumes:
     - /tmp/cache:/cache
+    - /build
   # Override the entry point so that it exists immediately once launched
   entrypoint: "true"

@@ -5,3 +5,8 @@ venv
 *.pyc
 
 # Ignore SQLite database files
+*.sqlite3
+
+# Ignore test and build artifacts
+reports
+target
