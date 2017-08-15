@@ -1,0 +1,48 @@
+test:
+  # Since we are going to build the image each time, we use the build
+  # statement instead of the image context. This statement will define
+  # where the build root context is. Will be ~/todobackend
+  build: ../../
+  # This must be expressed relative to the build root
+  dockerfile: docker/dev/Dockerfile
+  # This will link to a container called cache, or create one from
+  # this file if it exists.
+  volumes_from:
+    - cache
+  # This will allow the test container to contact the db container.
+  # It will add an entry in the hosts file of the test container.
+  links:
+    - db
+  environment:
+    DJANGO_SETTINGS_MODULE: todobackend.settings.test
+    MYSQL_HOST: db
+    MYSQL_USER: root
+    MYSQL_PASSWORD: password
+    TEST_OUTPUT_DIR: /reports
+
+agent:
+  image: pluralsight/ansible
+  volumes:
+    - ../../ansible/probe.yml:/ansible/site.yml
+  links:
+    - db
+  environment:
+    PROBE_HOST: "db"
+    PROBE_PORT: "3306"
+
+db: 
+  image: mysql:5.6
+  hostname: db
+  expose:
+    - "3306"
+  environment:
+    # This has to match the password set in the test container
+    MYSQL_ROOT_PASSWORD: password
+
+cache:
+  build: ../../
+  dockerfile: docker/dev/Dockerfile
+  volumes:
+    - /tmp/cache:/cache
+  # Override the entry point so that it exists immediately once launched
+  entrypoint: "true"
