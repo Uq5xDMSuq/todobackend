@@ -29,6 +29,16 @@ nginx:
   volumes_from:
     - webroot
 
+test:
+  image: pluralsight/todobackend-specs
+  links:
+    - nginx
+  environment:
+    URL: http://nginx:8000/todos
+    JUNIT_REPORT_PATH: /reports/acceptance.xml
+    JUNIT_REPORT_STACK: 1
+  command: --reporter mocha-jenkins-reporter
+
 webroot:
   build: ../../
   dockerfile: docker/release/Dockerfile
