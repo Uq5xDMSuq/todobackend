@@ -24,9 +24,6 @@ builder:
   # Same build and dockerfile as the "test" service
   build: ../../
   dockerfile: docker/dev/Dockerfile
-  volumes:
-    # This is where the builder will output application artifacts
-    - ../../target:/wheelhouse
   # This will get access to the cache volume created under the
   # Test stage, so it can be consumed during the build stage
   volumes_from:
@@ -40,14 +37,13 @@ builder:
   command: ["pip", "wheel", "--no-index", "-f /build", "."]
 
 agent:
-  image: pluralsight/ansible
-  volumes:
-    - ../../ansible/probe.yml:/ansible/site.yml
+  image: 4e82p7d6p872/ansible
   links:
     - db
   environment:
     PROBE_HOST: "db"
     PROBE_PORT: "3306"
+  command: ["probe.yml"]
 
 db: 
   image: mysql:5.6
