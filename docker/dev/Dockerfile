@@ -1,4 +1,4 @@
-FROM pluralsight/todobackend-base:latest
+FROM 4e82p7d6p872/todobackend-base:latest
 MAINTAINER Anonymous User
 
 # Install dev/build dependencies

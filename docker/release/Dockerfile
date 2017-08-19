@@ -1,5 +1,5 @@
-FROM pluralsight/todobackend-base:latest
-MAINTAINER Justin Menga <justin.menga@gmail.com>
+FROM 4e82p7d6p872/todobackend-base:latest
+MAINTAINER Anonymous User
 
 # Copy application artifacts
 COPY target /wheelhouse
