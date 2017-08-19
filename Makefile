@@ -18,7 +18,22 @@ CHECK := @bash -c '\
   if [[ $(INSPECT) -ne 0 ]]; \
   then exit $(INSPECT); fi' VALUE
 
-.PHONY: test build release clean 
+# Application Service Name - must match Docker Compose release specification application service name
+APP_SERVICE_NAME := app
+
+# Use these settings to specify a custom Docker registry
+DOCKER_REGISTRY ?= docker.io
+
+# Build tag expression - can be used to evaluate a shell expression at runtime
+BUILD_TAG_EXPRESSION ?= date -u +%Y%m%d%H%M%S
+
+# Execute shell expression
+BUILD_EXPRESSION := $(shell $(BUILD_TAG_EXPRESSION))
+
+# Build tag - defaults to BUILD_EXPRESSION if not defined
+BUILD_TAG ?= $(BUILD_EXPRESSION)
+
+.PHONY: test build release clean tag buildtag
 
 test:
 	${INFO} "Pulling latest images..."
@@ -73,6 +88,55 @@ clean:
 	${INFO} "Removing dangling images..."
 	@ docker images -q -f dangling=true -f label=application=$(REPO_NAME) | xargs -I ARGS docker rmi -f ARGS
 	${INFO} "Clean complete"
+
+tag: 
+	${INFO} "Tagging release image with tags $(TAG_ARGS)..."
+	@ # foreach (arg1, arg2, arg3)
+	@ #  arg1 = current parameter
+	@ #  arg2 = list of parameters. This is extracted using some commands below
+	@ #  arg3 = defines what action to perform
+	@ $(foreach tag,$(TAG_ARGS), docker tag $(IMAGE_ID) $(DOCKER_REGISTRY)/$(ORG_NAME)/$(REPO_NAME):$(tag);)
+	${INFO} "Tagging complete"
+
+buildtag:
+	${INFO} "Tagging release image with suffix $(BUILD_TAG) and build tags $(BUILDTAG_ARGS)..."
+	@ $(foreach tag,$(BUILDTAG_ARGS), docker tag $(IMAGE_ID) $(DOCKER_REGISTRY)/$(ORG_NAME)/$(REPO_NAME):$(tag).$(BUILD_TAG);)
+	${INFO} "Tagging complete"
+
+
+# Get container id of application service container
+APP_CONTAINER_ID := $$(docker-compose -p $(REL_PROJECT) -f $(REL_COMPOSE_FILE) ps -q $(APP_SERVICE_NAME))
+
+# Get image id of application service
+IMAGE_ID := $$(docker inspect -f '{{ .Image }}' $(APP_CONTAINER_ID))
+
+# Extract tag arguments
+# make tag 0.1 latest
+# $(MAKECMDGOALS) = tag 0.1 latest
+# $(firstword $(MAKECMDGOALS)) = tag
+ifeq (tag,$(firstword $(MAKECMDGOALS)))
+  # words returns the word count of MAKECMDGOALS
+  # wordlist returns the list of words in MAKECMDGOALS from
+  # position 2 to the total word count
+  TAG_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  # Guard clause to catch no args specified
+  ifeq ($(TAG_ARGS),)
+    $(error You must specify a tag)
+  endif
+  # This tells make to ignore the arguments as target files
+  # eg. make tag 0.1 latest, do not interpret 0.1 latest as make targets
+  # This is used instead of .PHONY because the list is dynamic
+  $(eval $(TAG_ARGS):;@:)
+endif
+
+# Extract build tag arguments
+ifeq (buildtag,$(firstword $(MAKECMDGOALS)))
+    BUILDTAG_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+  ifeq ($(BUILDTAG_ARGS),)
+    $(error You must specify a tag)
+  endif
+  $(eval $(BUILDTAG_ARGS):;@:)
+endif
 
 # Cosmetics
 YELLOW := "\e[1;33m"
